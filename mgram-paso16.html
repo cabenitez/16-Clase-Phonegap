@@ -1,193 +1,272 @@
 <!doctype html>
 <html>
    <head>
+   	<!-- Viewport nos sirve para que el navegador tome autimaticamente el ancho de la pantalla -->
 	<meta name="viewport" content="width=device-width,initial-scale=1"> 
-
+	<!-- Traemos el css de Jquery mobile -->
 	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.css" />
-
+	<!-- Traemos el api de los mapas de google -->
 	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script> 
+	<!-- Traemos el script de Jquery -->
 	<script src="http://code.jquery.com/jquery-1.8.3.min.js"></script>
+	<!-- Traemos el script de Jquery Mobile -->
 	<script src="http://code.jquery.com/mobile/1.2.0/jquery.mobile-1.2.0.min.js"></script>
+	<!-- Grupo de librerias que nos serviran para manejar mas facil los mapas con Jquery mobile -->
 	<script type="text/javascript" src="ui/jquery.ui.map.js"></script>
 	<script type="text/javascript" src="ui/jquery.ui.map.services.js"></script>
 	<script type="text/javascript" src="ui/jquery.ui.map.extensions.js"></script><script type="text/javascript" src="cordova-2.5.0.js"></script>
-			
+	<!-- Grupo de librerias que nos serviran para manejar mas facil los mapas con Jquery mobile -->
+
+	<!-- Inicio de mi aplicacion de JavaScript en Jquery -->
 	<script type="text/javascript">
+		/* Definimos la variable _photo_uri */
 		var _photo_uri;
+		/* Definimos la variable imgur_client_id para publicar fotos */
 		var imgur_client_id = "1841367133e3c0151755f5632959b990";
+		/* Definimos la variable _photo_uri en donde colo caremos nuestro id del cliente de la api de instagram (http://www.http://instagram.com/developer) */
 		var instagram_client_id = "fc8041d4af1544a2939c3f5a9a1ef8cf";
 
-		function getPhotos() {			
+		/* Inicio de funcion getPhotos() */
+		function getPhotos() {	
+			/* si #map es visible */
 			var map_visible = $("#map").is(':visible');
+			/* si #list es visible */
 			var list_visible = $("#list").is(':visible');
-
+			/* Si se lleno el input tag sera igual al valor digitado (para la pagina de #maps)*/
 			if (map_visible) {
 				tag = $("#map .tag").val();
-			} else if (list_visible) {
+			} 
+			/* Si se lleno el input tag sera igual al valor digitado (para la pagina de #list)*/
+			else if (list_visible) {
 				tag = $("#list .tag").val();
 			}
-
+			/* Si no se lleno el input tag sera igual a instafood */
 			if (tag == "") {
 				tag = "instafood";
 			}
 
+			/* Reemplazamos espacios por contenido vacio*/
 			tag = tag.replace(/(#| )/g,"");
-
+			/* Establecemos el boton de busqueda como deshabilitado mientras la busqueda se realiza */
 			$(".search-button").addClass('ui-disabled');
+			/* Damos un FeedBack de lo que esta pasando, esto es recomendable al desarrollar apps moviles */
 			$(".result-count").html("cargando...");
-
+			/* Si el mapa esta visible */
 			if (map_visible) {
+				/* Llamamos la funcion gmap con argumentos clear y markers */
 				$('#map_canvas').gmap('clear', 'markers');
-			} else if (list_visible) {
+			} 
+			/* Si #list es visible */
+			else if (list_visible) {
+				/* Vaciamos la lista */
 				$("#element_list").empty();
 			}
 
+			/* Definimos la variable url con el link de la busqueda incluyendo el tag (la busqueda en cuestion) y el id, esta url es un json que podemos ver en el navegador */
         	var url = "https://api.instagram.com/v1/tags/" + tag + "/media/recent?client_id=" + instagram_client_id + "&callback=?";
 
-        	$.getJSON(url, function(data){        		
+        	/* Obtenemos un JSON de la busqueda y definimos una funcion anonima */
+        	$.getJSON(url, function(data){  
+        		/* En este punto debemos analizar el JSON para entenderlo, definimos la variable data_elements con un valor data["data"] */      		
     			var data_elements = data["data"];
+    			/* Definimos la variable showing la cual contara el numero de elementos que nos devuelve la busqueda */
 				var showing = 0;
+				/* analizo mi JSON y recojo los datos a mostrar */
 				$.each(data_elements, function(index, current_element) {
+					/* Recojo la url de la imagen a mostrar */
 					var thumbnail = current_element["images"]["thumbnail"]["url"];
+					/* Establesco un texto por default (evitar errores) */
 					var caption = "ver imagen";
-					
+					/* Si el elemento tiene un texto lo reemplazo por mi texto por default */
 					if (current_element["caption"] != null) {
 						caption = current_element["caption"]["text"];
 					}
-
+					/* Tomo el link de la foto */
 					var link = current_element["link"];
-
+					/* Busco la localizacion de cada elemento y la ubico en el mapa */
+					/* Si esta el mapa visible y tengo una localizacion */
 					if (map_visible && current_element["location"] != null) {
+						/* Sumo cada elemento que muestro */
 						showing++;
-						var lat = current_element["location"]["latitude"]; 						 						
+						/* Tomo latitud de la foto */
+						var lat = current_element["location"]["latitude"]; 						 			
+						/* Tomo longitud de la foto */
 						var lng = current_element["location"]["longitude"];
+						/* Recojo la posicion de la latitud y longitud en un mapa de google */
 						var position = new google.maps.LatLng(lat,lng);
-					
+						/* Defino la ventana de informacion de la imagen */
 						var info_window = $('<span>').append(
 											$('<img>').attr('src',thumbnail)).append(
 												$('<br>')).append(
-													$('<a>').attr('href',link).text(caption)).html();					
+													$('<a>').attr('href',link).text(caption)).html();		
+						/* Agrego la foto en el mapa y coloco un evento en donde en caso de click despliego info_window */			
 						$('#map_canvas').gmap('addMarker', {'position': position}).click(function(){
 							 $('#map_canvas').gmap('openInfoWindow', {'content': info_window}, this);
 						 	 $('#map_canvas').gmap('getMap').panTo(position);
-						});						
+						});	
+						/* Si en #list esta visible (mirar variable list_visible arriba) */					
 					} else if (list_visible) {
 						showing++;
+						/* Sumo un elemento y agrego al div con id #element_list el elemento en cuestion */
 						$("#element_list").append(
 							$('<li>').append(
 								$('<a>').attr('href',link).append(
 									$('<img>').attr('src',thumbnail)).append(caption))
 						);
 					}
+					/* Busco la localizacion de cada elemento y la ubico en el mapa */
 				});
-
+				/* Si en #list esta visible (mirar variable list_visible arriba) */
 				if (list_visible) {
+					/* Refresco el estilo a #element_list */
 					$("#element_list").listview("refresh");
 				}
+				/* Habilito de nuevo el boton de busqueda */
  				$(".search-button").removeClass('ui-disabled');
+ 				/* Muestro el numero de resultados obtenidos en el div con clase .result-count */
  				$(".result-count").html("Mostrando " + showing + " resultados para #" + tag);
         	});				
 		}
+		/* Fin de funcion getPhotos() */
 
 	    function takePhoto() {
+	    	/* Tomamos opciones */
 	    	var opts = { 
+	    		/* Tamaño de la foto */
 	      		targetWidth: 300, 
 	      		targetHeight: 300, 
+	      		/* El destino sera un URI */
 	      		destinationType : Camera.DestinationType.FILE_URI
 	    	}
-	    
+	    	/* Accedemos a el objeto camara y tome la fotografia */
 	    	navigator.camera.getPicture(function(imageURI) {
+	    									/* Devuelva la fotografia */
 	    									_photo_uri = imageURI;
 	    									$("#pic").attr("src",_photo_uri);
-	    								}, 
+	    								}, /* Caso de error */
 	    								function(error){
+	    										/* Informar error en #picinfo */
 	    										$("#picinfo").html("error " + error.code);
 	    								}, opts)
 		}		
 
 		function uploadPhoto() {
+			  /* Definimos un objeto y establecemos sus atributos */
 		      var opts = new FileUploadOptions();
 		      opts.fileKey  = "image";
 		      opts.fileName = _photo_uri.substr(_photo_uri.lastIndexOf('/')+1);
 		      opts.mimeType = "image/jpeg";
 		      opts.params   = {"type":"file","key":imgur_client_id};
+		      /* Definimos un objeto y establecemos sus atributos */
+		      /* instanciamos a FileTransfer perteneciente a PhoneGap */
 		      var ft = new FileTransfer();
+		      /* invocamos upload diciendo que suba la imagen con caso de exito y error */
 		      ft.upload(_photo_uri, "http://api.imgur.com/3/upload.json",
-
+		      				  /* Caso de exito en donde nos devuelve la url de la imagen */ 
 		      			      function(resp) {		      			      	
 		      			      	var link = jQuery.parseJSON(resp.response).data.link;
 		      			      	$("#picinfo").html($("<a>").attr("href",link).text("imagen publicada en " + link));
-		      				  },			
+		      				  },
+		      				  /* Caso de error informando el error */			
 		      				 function(error) {
 		      				 	$("#picinfo").html("no fue posible publicar " + error.code);
 		      				  }, opts);
 
 		}		
-
-		function locationSuccess(position){			
+		/* Defino la funcion en caso de que la localizacion se realize */
+		function locationSuccess(position){	
+			/* Define las variables lat y lan y guarda la latitud y longitud del usuario */		
 			var lat = position.coords.latitude;			 			
-			var lng = position.coords.longitude;	
+			var lng = position.coords.longitude;
+			/* Añade un mapa de google maps centrado en mi ubicacion con un zoom de 5 */	
 			$('#map_canvas').gmap({ 'center': new google.maps.LatLng(lat, lng), 'zoom': 5});
+			/* Ejecuto funcion getPhotos() */
 			getPhotos();
 		}
-		
+		/* Defino la funcion en caso de que la geolocalizacion no se realize */
 		function locationError(error) {
+			/* Creo el mapa de google maps */
 			$('#map_canvas').gmap({'zoom': 2});
+			/* Ejecuto funcion getPhotos() */
 			getPhotos();
 		}
-
+		/*  */
         $("#map").live("pagecreate", function() {        	
 		 	if (navigator.geolocation) {
+		 		/* Geolocalizacion en HTML5 */
 				navigator.geolocation.getCurrentPosition(
 					locationSuccess,locationError,
 					{enableHighAccuracy: true });
 			}	
         });
-
+        /* Cuando el #list este mostrandose, ejecute la funcion getPhotos() */
         $("#list").live("pageshow", function() {
         	getPhotos();
         });
-        
+        /* En el evento de click en los enlaces dentro del data-role="navbar" */
 		$(document).on('click', '[data-role="navbar"] a', function () {
+			/* Cambiar de pagina por la especificada en el data-href de cada link */
             $.mobile.changePage($(this).attr("data-href"), {
+            	/* Sin ninguna transicion y sin cambiar la URL de la barra de direcciones */
                 transition: "none",
                 changeHash: false
         	});        	
 		    return false;
 		});
 	</script>
+	<!-- Fin de mi aplicacion de JavaScript en Jquery -->
    </head>
    <body>
+   	<!-- Inicio del div con un role de page (pagina) -->
 	<div id="map" data-role="page">
+		<!-- Inicio del div con un role de header (encabezado) -->
 		<div data-role="header">
 			<h1>Mejorando.la-gram</h1>			
 		</div>
+		<!-- Fin del div con un role de header -->
+		<!-- Inicio del div con un role de navbar (barra de navegacion) -->
 		<div data-role="navbar">
+			<!-- Aca tendremos cada uno de los items de navegacion dirigidos por un data-href hacia un id definido en el documento y una clase "ui-btn-active", clase que le dara el estado de activo al boton -->
 			<ul>
 				<li><a href="#" data-href="#map" class="ui-btn-active">Mapa</a></li>
 				<li><a href="#" data-href="#list">Listado</a></li>
 				<li><a href="#" data-href="#upload">Mis fotos</a></li>
 			</ul>
 		</div>
+		<!-- Fin del div con un role de navbar -->
 		<div data-role="content">
+			<!-- Creamos un fieldset con una clase "ui-grid-a", esta clase nos sirve para definir el numero de columnas en que se divide el contenido dentro del fieldset. 
+			a -> 2 columnas
+			b -> 3 columnas
+			y asi susesivamente -->
 			<fieldset class="ui-grid-a">
+				<!-- Para definir la primer columna colocamos en el di una clase "ui-block-a" -->
 			    <div class="ui-block-a">
 			    	<input type="text" class="tag" name="tag"/>
 			    </div>			    
+			    <!-- Para definir la primer columna colocamos en el di una clase "ui-block-b" -->
 			    <div class="ui-block-b">
+			    	<!-- Colocamos un enlace dirigiendo hacia una funcion de nuestro javascript y le colocamos un role de boton para aplicarle el estilo, un icon check para el icono, el inline (Recordar que estos data le dan estilo al enlace) para que ocupe el espacio necesario y por ultimo una clase de boton de busqueda -->
 			        <a href="javascript:getPhotos();" data-role="button" 
 			        								  data-icon="check" data-inline="true" class="search-button">Buscar</a>
 			    </div>
 			</fieldset>
-
+			<!-- Cerramos el Fieldset -->
+			<!-- Tenemos un div con clase "result-cont" el cual tendra la cuenta de los resultados -->
 			<div class="result-count"></div>
 			<br/>
+			<!-- Cramos un div con las siguientes clases:
+			ui-bar-c -> degrado de fondo
+			ui-corner-all -> bordes redondeados
+			ui-shadow -> sombra de la caja
+			y un padding de 1em -->
 			<div class="ui-bar-c ui-corner-all ui-shadow" style="padding:1em;">
+				<!-- Tenemos un div con id map_canvas y establecemos un alto de 350 px -->
 				<div id="map_canvas" style="height:350px"></div>
 			</div>
 		</div>
 	</div>
-
+	<!-- Fin del div con un role de "Page" -->
 	<div id="list" data-role="page">
 		<div data-role="header">
 			<h1>Mejorando.la-gram</h1>			
@@ -212,6 +291,7 @@
 
 			<div class="result-count"></div>			
 			<br/>
+			<!-- Creamos una lista de role listview que nos dara el estilo de lista, cabe anotar que la lista debe estar vacia -->
 			<ul data-role="listview" id="element_list"></ul>			
 		</div>
 	</div>   	
@@ -227,6 +307,7 @@
 				<li><a href="#" data-href="#upload" class="ui-btn-active">Mis fotos</a></li>
 			</ul>
 		</div>
+		<!-- Agregamos dos enlace con rol de boton, uno para tomar la foto y otro para publicarla que en el caso de un click se llevara a una funcion en JavaScript -->
 		<a href="#" data-role="button" onclick="takePhoto();">Tomar una foto</a>
 		<a href="#" data-role="button" onclick="uploadPhoto();">Publicarla</a>
 
